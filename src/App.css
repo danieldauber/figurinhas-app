@@ -1,5 +1,30 @@
 .app {
   color: var(--color-gray-900);
+  position: relative;
+}
+
+.admin-badge {
+  position: fixed;
+  top: var(--spacing-md);
+  left: var(--spacing-md);
+  background: var(--color-warning);
+  color: white;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  z-index: 1001;
+  box-shadow: var(--shadow-lg);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 /* Header */

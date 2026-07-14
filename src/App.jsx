@@ -14,6 +14,10 @@ function App() {
   const [showGroupSetup, setShowGroupSetup] = useState(!groupId)
   const [newGroupName, setNewGroupName] = useState('')
 
+  // Admin mode check
+  const isAdmin = window.location.search.includes('admin=true') ||
+                  window.location.pathname.includes('/admin')
+
   // Load users from localStorage based on group
   const [users, setUsers] = useState(() => {
     const id = getGroupId()
@@ -649,6 +653,11 @@ function App() {
 
   return (
     <div className="app">
+      {isAdmin && (
+        <div className="admin-badge">
+          🔐 Modo Admin
+        </div>
+      )}
       <header className="header">
         <div className="header-top">
           <div className="group-info-header">
@@ -723,15 +732,17 @@ function App() {
                     {currentUser === user.name && '🔓 '}
                     {user.name}
                   </h3>
-                  <button
-                    className="btn-delete"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      deleteUser(user.name)
-                    }}
-                  >
-                    ×
-                  </button>
+                  {isAdmin && (
+                    <button
+                      className="btn-delete"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        deleteUser(user.name)
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
                 <div className="user-stats">
                   <span className="stat missing">

@@ -8,6 +8,10 @@ function App() {
   })
   const [currentUser, setCurrentUser] = useState('')
   const [newUserName, setNewUserName] = useState('')
+  const [newUserPassword, setNewUserPassword] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false)
+  const [selectedUserForLogin, setSelectedUserForLogin] = useState('')
   const [newSticker, setNewSticker] = useState('')
   const [stickerType, setStickerType] = useState('faltante')
   const [matches, setMatches] = useState([])
@@ -16,23 +20,70 @@ function App() {
   const [importText, setImportText] = useState('')
   const [searchFilter, setSearchFilter] = useState('')
   const [importMode, setImportMode] = useState('auto') // 'auto', 'faltantes', 'repetidas'
+  const [showHelp, setShowHelp] = useState(false)
 
   useEffect(() => {
     localStorage.setItem('figurinhas_users', JSON.stringify(users))
   }, [users])
 
   const addUser = () => {
-    if (!newUserName.trim()) return
+    if (!newUserName.trim()) {
+      alert('Digite um nome de usuário!')
+      return
+    }
+    if (!newUserPassword.trim()) {
+      alert('Digite uma senha!')
+      return
+    }
     if (users.find(u => u.name === newUserName)) {
       alert('Usuário já existe!')
       return
     }
     setUsers([...users, {
       name: newUserName,
+      password: newUserPassword, // Em produção, isso deveria ser hash
       faltantes: [],
       repetidas: []
     }])
     setNewUserName('')
+    setNewUserPassword('')
+    alert(`Usuário ${newUserName} criado com sucesso!\n\n⚠️ Guarde sua senha: ${newUserPassword}`)
+  }
+
+  const handleUserClick = (userName) => {
+    const user = users.find(u => u.name === userName)
+    if (!user) return
+
+    // Se já está logado como esse usuário, não pede senha
+    if (currentUser === userName) {
+      setCurrentUser('')
+      return
+    }
+
+    setSelectedUserForLogin(userName)
+    setShowPasswordPrompt(true)
+    setLoginPassword('')
+  }
+
+  const handleLogin = () => {
+    const user = users.find(u => u.name === selectedUserForLogin)
+    if (!user) return
+
+    if (loginPassword === user.password) {
+      setCurrentUser(selectedUserForLogin)
+      setShowPasswordPrompt(false)
+      setLoginPassword('')
+      setSelectedUserForLogin('')
+    } else {
+      alert('Senha incorreta!')
+      setLoginPassword('')
+    }
+  }
+
+  const handleCancelLogin = () => {
+    setShowPasswordPrompt(false)
+    setLoginPassword('')
+    setSelectedUserForLogin('')
   }
 
   const addSticker = () => {
@@ -381,6 +432,9 @@ function App() {
       <header className="header">
         <h1>🎴 Troca de Figurinhas</h1>
         <p>Match automático entre faltantes e repetidas</p>
+        <button onClick={() => setShowHelp(true)} className="btn btn-help">
+          ❓ Como Usar
+        </button>
       </header>
 
       <div className="container">
@@ -392,12 +446,22 @@ function App() {
               placeholder="Nome do usuário"
               value={newUserName}
               onChange={(e) => setNewUserName(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && addUser()}
+              onKeyPress={(e) => e.key === 'Enter' && newUserPassword && addUser()}
+            />
+            <input
+              type="password"
+              placeholder="Senha secreta"
+              value={newUserPassword}
+              onChange={(e) => setNewUserPassword(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && newUserName && addUser()}
             />
             <button onClick={addUser} className="btn btn-primary">
               Adicionar
             </button>
           </div>
+          <p className="password-hint">
+            🔒 Cada usuário precisa de uma senha para editar suas figurinhas
+          </p>
         </div>
 
         <div className="section">
@@ -423,10 +487,13 @@ function App() {
               <div
                 key={user.name}
                 className={`user-card ${currentUser === user.name ? 'active' : ''}`}
-                onClick={() => setCurrentUser(user.name)}
+                onClick={() => handleUserClick(user.name)}
               >
                 <div className="user-header">
-                  <h3>{user.name}</h3>
+                  <h3>
+                    {currentUser === user.name && '🔓 '}
+                    {user.name}
+                  </h3>
                   <button
                     className="btn-delete"
                     onClick={(e) => {
@@ -449,6 +516,77 @@ function App() {
             ))}
           </div>
         </div>
+
+        {showPasswordPrompt && (
+          <div className="modal-overlay" onClick={handleCancelLogin}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <h2>🔒 Digite a senha de {selectedUserForLogin}</h2>
+              <input
+                type="password"
+                placeholder="Senha"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                autoFocus
+                className="password-input"
+              />
+              <div className="modal-actions">
+                <button onClick={handleLogin} className="btn btn-primary">
+                  Entrar
+                </button>
+                <button onClick={handleCancelLogin} className="btn btn-secondary">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showHelp && (
+          <div className="modal-overlay" onClick={() => setShowHelp(false)}>
+            <div className="modal-content modal-help" onClick={(e) => e.stopPropagation()}>
+              <h2>📖 Como Usar o App</h2>
+              <div className="help-content">
+                <div className="help-step">
+                  <h3>1️⃣ Criar Usuário</h3>
+                  <p>Digite seu nome e uma senha secreta. A senha protege suas figurinhas para que só você possa editá-las.</p>
+                </div>
+
+                <div className="help-step">
+                  <h3>2️⃣ Fazer Login</h3>
+                  <p>Clique no seu card de usuário e digite sua senha. O card ficará destacado quando você estiver logado.</p>
+                </div>
+
+                <div className="help-step">
+                  <h3>3️⃣ Adicionar Figurinhas</h3>
+                  <p><strong>Opção A:</strong> Clique em "📋 Importar" e cole sua lista completa. O app aceita vários formatos!</p>
+                  <p><strong>Opção B:</strong> Adicione uma por uma digitando o código (ex: BRA-5)</p>
+                </div>
+
+                <div className="help-step">
+                  <h3>4️⃣ Encontrar Trocas</h3>
+                  <p>Quando todos adicionarem suas figurinhas, clique no botão "🎯 Encontrar Matches". O app mostra todas as trocas possíveis!</p>
+                </div>
+
+                <div className="help-step">
+                  <h3>5️⃣ Confirmar Trocas</h3>
+                  <p>Clique em "Confirmar Troca" para registrar. As figurinhas são atualizadas automaticamente para ambos os usuários.</p>
+                </div>
+
+                <div className="help-tip">
+                  <strong>💡 Dica:</strong> Use o botão "📤 Exportar" para copiar sua lista atualizada e compartilhar com os colegas!
+                </div>
+
+                <div className="help-tip">
+                  <strong>🔍 Busca:</strong> Use o campo de busca para encontrar figurinhas específicas rapidamente.
+                </div>
+              </div>
+              <button onClick={() => setShowHelp(false)} className="btn btn-primary btn-close-help">
+                Entendi!
+              </button>
+            </div>
+          </div>
+        )}
 
         {currentUser && (
           <div className="section">

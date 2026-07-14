@@ -95,17 +95,6 @@ function App() {
     })
   }
 
-  const leaveGroup = () => {
-    if (confirm(`Tem certeza que deseja sair do grupo "${groupInfo?.name}"?\n\nVocê pode voltar usando o link do grupo.`)) {
-      window.location.hash = ''
-      setGroupId(null)
-      setUsers([])
-      setGroupInfo(null)
-      setShowGroupSetup(true)
-      setCurrentUser('')
-    }
-  }
-
   const addUser = () => {
     if (!newUserName.trim()) {
       alert('Digite um nome de usuário!')
@@ -507,42 +496,151 @@ function App() {
 
   const stats = getStats()
 
-  // Tela de Setup de Grupo
-  if (showGroupSetup || !groupId || !groupInfo) {
+  // Landing Page pública (sem grupo)
+  if (!groupId) {
+    // Rota secreta para criar grupos
+    const isAdminRoute = window.location.pathname.includes('/admin') ||
+                        window.location.search.includes('admin=true')
+
+    if (isAdminRoute) {
+      return (
+        <div className="group-setup">
+          <div className="group-setup-card">
+            <h1>🎴 Criar Novo Grupo</h1>
+            <p className="group-subtitle">Painel administrativo - Criação de grupos</p>
+
+            <div className="group-option">
+              <div className="input-group">
+                <input
+                  type="text"
+                  placeholder="Nome do grupo (ex: Trabalho, Condomínio, Família)"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && createGroup()}
+                  autoFocus
+                />
+                <button onClick={createGroup} className="btn btn-primary">
+                  Criar Grupo
+                </button>
+              </div>
+            </div>
+
+            <div className="admin-hint">
+              ⚠️ Após criar, compartilhe o link gerado com os participantes
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    // Landing Page pública
+    return (
+      <div className="landing-page">
+        <div className="landing-container">
+          <div className="landing-hero">
+            <h1>🎴 App de Troca de Figurinhas</h1>
+            <p className="landing-subtitle">
+              Sistema inteligente para organizar trocas de figurinhas com seus amigos
+            </p>
+          </div>
+
+          <div className="landing-content">
+            <div className="landing-card">
+              <h2>🤔 Como Funciona?</h2>
+              <div className="landing-steps">
+                <div className="landing-step">
+                  <div className="step-number">1</div>
+                  <div className="step-content">
+                    <h3>Receba o Link do Grupo</h3>
+                    <p>O organizador vai compartilhar um link único com você</p>
+                  </div>
+                </div>
+
+                <div className="landing-step">
+                  <div className="step-number">2</div>
+                  <div className="step-content">
+                    <h3>Cadastre-se no Grupo</h3>
+                    <p>Crie sua conta com nome e senha secreta</p>
+                  </div>
+                </div>
+
+                <div className="landing-step">
+                  <div className="step-number">3</div>
+                  <div className="step-content">
+                    <h3>Adicione suas Figurinhas</h3>
+                    <p>Informe quais faltam e quais são repetidas</p>
+                  </div>
+                </div>
+
+                <div className="landing-step">
+                  <div className="step-number">4</div>
+                  <div className="step-content">
+                    <h3>Match Automático!</h3>
+                    <p>O sistema mostra todas as trocas possíveis entre vocês</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="landing-card landing-features">
+              <h2>✨ Recursos</h2>
+              <ul className="features-list">
+                <li>🔒 <strong>Proteção por senha</strong> - Suas figurinhas são privadas</li>
+                <li>📋 <strong>Importação rápida</strong> - Cole sua lista completa de uma vez</li>
+                <li>🎯 <strong>Match inteligente</strong> - Encontra todas as trocas possíveis</li>
+                <li>🔍 <strong>Busca rápida</strong> - Encontre figurinhas específicas</li>
+                <li>📤 <strong>Exportação</strong> - Compartilhe sua lista atualizada</li>
+                <li>📱 <strong>Mobile-friendly</strong> - Funciona no celular</li>
+              </ul>
+            </div>
+
+            <div className="landing-cta">
+              <div className="cta-card">
+                <h3>🔗 Precisa do Link do Grupo?</h3>
+                <p>
+                  Peça ao organizador do seu grupo para compartilhar o link de acesso.
+                  O link tem esse formato:
+                </p>
+                <div className="cta-example">
+                  <code>{window.location.origin}#abc123xyz</code>
+                </div>
+                <p className="cta-note">
+                  Cada grupo tem um link único e exclusivo
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <footer className="landing-footer">
+            <p>Feito com 💜 para facilitar suas trocas de figurinhas</p>
+          </footer>
+        </div>
+      </div>
+    )
+  }
+
+  // Grupo não existe
+  if (!groupInfo) {
     return (
       <div className="group-setup">
-        <div className="group-setup-card">
-          <h1>🎴 Bem-vindo ao App de Figurinhas!</h1>
-          <p className="group-subtitle">Crie um grupo novo ou entre em um existente</p>
-
-          <div className="group-option">
-            <h2>✨ Criar Novo Grupo</h2>
-            <p>Crie um grupo e convide seus amigos compartilhando o link</p>
-            <div className="input-group">
-              <input
-                type="text"
-                placeholder="Nome do grupo (ex: Trabalho, Condomínio, Família)"
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && createGroup()}
-                autoFocus
-              />
-              <button onClick={createGroup} className="btn btn-primary">
-                Criar Grupo
-              </button>
-            </div>
-          </div>
-
-          <div className="group-divider">
-            <span>ou</span>
-          </div>
-
-          <div className="group-option">
-            <h2>🔗 Entrar em Grupo Existente</h2>
-            <p>Se você já tem um link de convite, cole na barra de endereço do navegador</p>
-            <div className="group-hint">
-              💡 O link tem o formato: <code>{window.location.origin}{window.location.pathname}#abc123xyz</code>
-            </div>
+        <div className="group-setup-card error-card">
+          <h1>❌ Grupo Não Encontrado</h1>
+          <p className="group-subtitle">
+            O link que você usou não corresponde a nenhum grupo ativo.
+          </p>
+          <div className="error-actions">
+            <p>Possíveis motivos:</p>
+            <ul>
+              <li>O link está incompleto ou incorreto</li>
+              <li>O grupo ainda não foi criado</li>
+              <li>Houve um erro ao copiar o link</li>
+            </ul>
+            <button
+              onClick={() => window.location.hash = ''}
+              className="btn btn-primary"
+            >
+              ← Voltar para Home
+            </button>
           </div>
         </div>
       </div>
@@ -558,9 +656,6 @@ function App() {
             <div className="group-actions-header">
               <button onClick={copyGroupLink} className="btn btn-secondary btn-sm">
                 🔗 Copiar Link
-              </button>
-              <button onClick={leaveGroup} className="btn btn-danger btn-sm">
-                ← Sair
               </button>
             </div>
           </div>

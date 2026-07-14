@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Como Usar - App de Troca de Figurinhas</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h1 {
+      color: #667eea;
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #999;
+      margin-bottom: 30px;
+      font-size: 1.1em;
+    }
+    .step {
+      background: #f8f9fa;
+      padding: 25px;
+      border-radius: 15px;
+      margin-bottom: 25px;
+      border-left: 5px solid #667eea;
+    }
+    .step-number {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 35px;
+      font-weight: bold;
+      margin-right: 15px;
+    }
+    .step h2 {
+      display: inline-block;
+      color: #333;
+      font-size: 1.5em;
+      margin-bottom: 15px;
+    }
+    .step p {
+      color: #666;
+      line-height: 1.8;
+      margin-top: 15px;
+    }
+    .code-block {
+      background: #2d2d2d;
+      color: #f8f8f2;
+      padding: 20px;
+      border-radius: 10px;
+      font-family: 'Courier New', monospace;
+      margin: 15px 0;
+      overflow-x: auto;
+      white-space: pre-line;
+      line-height: 1.6;
+    }
+    .highlight {
+      background: rgba(102, 126, 234, 0.1);
+      padding: 2px 8px;
+      border-radius: 5px;
+      font-weight: 600;
+      color: #667eea;
+    }
+    .feature-list {
+      list-style: none;
+      margin: 20px 0;
+    }
+    .feature-list li {
+      padding: 10px 0;
+      color: #666;
+      font-size: 1.05em;
+    }
+    .feature-list li:before {
+      content: "✅ ";
+      margin-right: 10px;
+    }
+    .tip {
+      background: #fff3cd;
+      border: 2px solid #ffc107;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .tip strong {
+      color: #ff9800;
+      display: block;
+      margin-bottom: 10px;
+      font-size: 1.1em;
+    }
+    .cta {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px 40px;
+      border-radius: 50px;
+      text-align: center;
+      font-size: 1.3em;
+      font-weight: bold;
+      text-decoration: none;
+      display: inline-block;
+      margin: 30px 0;
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+      transition: transform 0.3s;
+    }
+    .cta:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(102, 126, 234, 0.5);
+    }
+    .example-list {
+      background: white;
+      border: 2px dashed #667eea;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 15px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎴 Como Usar o App de Troca de Figurinhas</h1>
+    <p class="subtitle">Guia completo para importar suas listas e encontrar trocas</p>
+
+    <div class="step">
+      <h2><span class="step-number">1</span> Adicione os Participantes</h2>
+      <p>
+        Digite o nome de cada pessoa que vai participar da troca e clique em <span class="highlight">Adicionar</span>.
+        Você pode adicionar quantos participantes quiser!
+      </p>
+      <ul class="feature-list">
+        <li>Cada pessoa terá seu próprio card colorido</li>
+        <li>O card mostra quantas figurinhas faltam e quantas são repetidas</li>
+        <li>Clique no card para gerenciar as figurinhas daquela pessoa</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <h2><span class="step-number">2</span> Importe sua Lista (Recomendado)</h2>
+      <p>
+        Com o usuário selecionado, clique no botão <span class="highlight">📋 Importar</span> e cole sua lista completa.
+        O app aceita o formato que você já usa!
+      </p>
+
+      <div class="tip">
+        <strong>💡 Dica Pro:</strong>
+        Cole sua lista exatamente como você tem. O parser é inteligente e entende vários formatos!
+      </div>
+
+      <p><strong>Formato aceito:</strong></p>
+      <div class="code-block">Faltantes
+USA 🇺🇸: 3, 6, 7, 8, 13, 14
+BRA 🇧🇷: 1, 5, 10
+ARG 🇦🇷: 2, 4, 9
+
+Repetidas
+ESP 🇪🇸: 1, 3, 5
+POR 🇵🇹: 2, 8
+FRA 🇫🇷: 4, 7, 12</div>
+
+      <ul class="feature-list">
+        <li>Use "Faltantes" e "Repetidas" para separar as seções</li>
+        <li>Formato: CÓDIGO_PAÍS emoji: números separados por vírgula</li>
+        <li>Os emojis são opcionais (mas ficam bonitos!)</li>
+        <li>O app ignora linhas de cabeçalho automaticamente</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <h2><span class="step-number">3</span> Adicione Manualmente (Alternativa)</h2>
+      <p>
+        Se preferir, você pode adicionar uma por uma:
+      </p>
+      <ul class="feature-list">
+        <li>Digite o número no formato <span class="highlight">PAÍS-NÚMERO</span> (ex: USA-5)</li>
+        <li>Escolha se é "Faltante" ou "Repetida"</li>
+        <li>Clique em <span class="highlight">Adicionar</span></li>
+        <li>As figurinhas são ordenadas automaticamente</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <h2><span class="step-number">4</span> Encontre Matches Automáticos</h2>
+      <p>
+        Quando todos adicionarem suas listas, clique no grande botão:
+      </p>
+      <div class="example-list">
+        <center>
+          <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; border-radius: 15px; font-weight: bold; font-size: 1.3em;">
+            🎯 Encontrar Matches
+          </div>
+        </center>
+      </div>
+      <p>
+        O algoritmo vai encontrar TODAS as trocas possíveis onde:
+      </p>
+      <ul class="feature-list">
+        <li>Uma pessoa tem uma figurinha <strong>repetida</strong></li>
+        <li>Outra pessoa tem essa mesma figurinha como <strong>faltante</strong></li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <h2><span class="step-number">5</span> Confirme as Trocas</h2>
+      <p>
+        Cada match mostra:
+      </p>
+      <div class="code-block"><span style="color: #667eea;">João</span> → <span style="color: #ff4757;">#USA-13</span> → <span style="color: #764ba2;">Maria</span></div>
+      <p>
+        Clique em <span class="highlight">Confirmar Troca</span> e o app automaticamente:
+      </p>
+      <ul class="feature-list">
+        <li>Remove da lista de repetidas do João</li>
+        <li>Remove da lista de faltantes da Maria</li>
+        <li>Atualiza os matches em tempo real</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <h2><span class="step-number">6</span> Exporte e Compartilhe</h2>
+      <p>
+        Clique em <span class="highlight">📤 Exportar</span> para copiar sua lista atualizada.
+        Perfeito para compartilhar com os colegas!
+      </p>
+      <ul class="feature-list">
+        <li>Lista formatada e organizada por país</li>
+        <li>Copia automaticamente para a área de transferência</li>
+        <li>Fácil de colar no WhatsApp, Slack, email, etc</li>
+      </ul>
+    </div>
+
+    <div class="tip">
+      <strong>🎯 Exemplo de Match:</strong>
+      Se João tem "USA-13" repetida e Maria tem "USA-13" faltante, o app mostra essa troca automaticamente.
+      Basta confirmar e pronto! 🎉
+    </div>
+
+    <center>
+      <a href="http://localhost:3000" class="cta">
+        🚀 Abrir o App
+      </a>
+    </center>
+
+    <div style="margin-top: 50px; padding-top: 30px; border-top: 2px solid #eee; color: #999; text-align: center;">
+      <p>💾 Todos os dados são salvos automaticamente no navegador</p>
+      <p style="margin-top: 10px;">✨ Interface responsiva - funciona no celular também!</p>
+    </div>
+  </div>
+</body>
+</html>

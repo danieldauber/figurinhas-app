@@ -32,6 +32,7 @@ function App() {
   const [searchFilter, setSearchFilter] = useState('')
   const [importMode, setImportMode] = useState('auto') // 'auto', 'faltantes', 'repetidas'
   const [showHelp, setShowHelp] = useState(false)
+  const [importing, setImporting] = useState(false)
 
   // Load group and users from API
   useEffect(() => {
@@ -420,11 +421,13 @@ function App() {
       return
     }
 
+    setImporting(true)
     try {
       const { faltantes, repetidas } = parseImportText(importText, currentUser)
 
       if (faltantes.length === 0 && repetidas.length === 0) {
         alert('Nenhuma figurinha encontrada. Verifique o formato da lista.')
+        setImporting(false)
         return
       }
 
@@ -449,6 +452,8 @@ function App() {
     } catch (error) {
       alert('Erro ao importar lista. Verifique o formato.')
       console.error(error)
+    } finally {
+      setImporting(false)
     }
   }
 
@@ -956,10 +961,21 @@ function App() {
                   onChange={(e) => setImportText(e.target.value)}
                   placeholder="Cole sua lista aqui..."
                   rows={10}
+                  disabled={importing}
                 />
+                {importing && (
+                  <div className="import-loading">
+                    <div className="loading-spinner"></div>
+                    <p>Processando e salvando suas figurinhas...</p>
+                  </div>
+                )}
                 <div className="import-actions">
-                  <button onClick={importList} className="btn btn-primary">
-                    Importar
+                  <button
+                    onClick={importList}
+                    className="btn btn-primary"
+                    disabled={importing}
+                  >
+                    {importing ? '⏳ Importando...' : 'Importar'}
                   </button>
                   <button
                     onClick={() => {
@@ -967,6 +983,7 @@ function App() {
                       setShowImport(false)
                     }}
                     className="btn btn-secondary"
+                    disabled={importing}
                   >
                     Cancelar
                   </button>

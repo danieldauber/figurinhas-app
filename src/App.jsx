@@ -2,8 +2,23 @@ import { useState, useEffect } from 'react'
 import './App.css'
 
 function App() {
+  // Sistema de Grupos
+  const getGroupId = () => window.location.hash.slice(1) || null
+  const [groupId, setGroupId] = useState(getGroupId())
+  const [groupInfo, setGroupInfo] = useState(() => {
+    const id = getGroupId()
+    if (!id) return null
+    const saved = localStorage.getItem(`figurinhas_group_${id}`)
+    return saved ? JSON.parse(saved) : null
+  })
+  const [showGroupSetup, setShowGroupSetup] = useState(!groupId)
+  const [newGroupName, setNewGroupName] = useState('')
+
+  // Load users from localStorage based on group
   const [users, setUsers] = useState(() => {
-    const saved = localStorage.getItem('figurinhas_users')
+    const id = getGroupId()
+    if (!id) return []
+    const saved = localStorage.getItem(`figurinhas_users_${id}`)
     return saved ? JSON.parse(saved) : []
   })
   const [currentUser, setCurrentUser] = useState('')
@@ -22,9 +37,74 @@ function App() {
   const [importMode, setImportMode] = useState('auto') // 'auto', 'faltantes', 'repetidas'
   const [showHelp, setShowHelp] = useState(false)
 
+  // Save users to localStorage with group isolation
   useEffect(() => {
-    localStorage.setItem('figurinhas_users', JSON.stringify(users))
-  }, [users])
+    if (groupId) {
+      localStorage.setItem(`figurinhas_users_${groupId}`, JSON.stringify(users))
+    }
+  }, [users, groupId])
+
+  // Listen for hash changes (group changes)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const newGroupId = getGroupId()
+      setGroupId(newGroupId)
+      if (newGroupId) {
+        const saved = localStorage.getItem(`figurinhas_users_${newGroupId}`)
+        setUsers(saved ? JSON.parse(saved) : [])
+        const groupData = localStorage.getItem(`figurinhas_group_${newGroupId}`)
+        setGroupInfo(groupData ? JSON.parse(groupData) : null)
+        setShowGroupSetup(false)
+        setCurrentUser('')
+      } else {
+        setShowGroupSetup(true)
+        setUsers([])
+        setGroupInfo(null)
+      }
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
+  const createGroup = () => {
+    if (!newGroupName.trim()) {
+      alert('Digite um nome para o grupo!')
+      return
+    }
+    const hash = Math.random().toString(36).substring(2, 10) + Date.now().toString(36)
+    const groupData = {
+      name: newGroupName,
+      createdAt: new Date().toISOString(),
+      hash: hash
+    }
+    localStorage.setItem(`figurinhas_group_${hash}`, JSON.stringify(groupData))
+    window.location.hash = hash
+    setGroupId(hash)
+    setGroupInfo(groupData)
+    setShowGroupSetup(false)
+    setNewGroupName('')
+  }
+
+  const copyGroupLink = () => {
+    const link = `${window.location.origin}${window.location.pathname}#${groupId}`
+    navigator.clipboard.writeText(link).then(() => {
+      alert('🔗 Link do grupo copiado!\n\nCompartilhe com seus colegas para eles entrarem no mesmo grupo.')
+    }).catch(() => {
+      prompt('Copie o link do grupo:', link)
+    })
+  }
+
+  const leaveGroup = () => {
+    if (confirm(`Tem certeza que deseja sair do grupo "${groupInfo?.name}"?\n\nVocê pode voltar usando o link do grupo.`)) {
+      window.location.hash = ''
+      setGroupId(null)
+      setUsers([])
+      setGroupInfo(null)
+      setShowGroupSetup(true)
+      setCurrentUser('')
+    }
+  }
 
   const addUser = () => {
     if (!newUserName.trim()) {
@@ -427,11 +507,65 @@ function App() {
 
   const stats = getStats()
 
+  // Tela de Setup de Grupo
+  if (showGroupSetup || !groupId || !groupInfo) {
+    return (
+      <div className="group-setup">
+        <div className="group-setup-card">
+          <h1>🎴 Bem-vindo ao App de Figurinhas!</h1>
+          <p className="group-subtitle">Crie um grupo novo ou entre em um existente</p>
+
+          <div className="group-option">
+            <h2>✨ Criar Novo Grupo</h2>
+            <p>Crie um grupo e convide seus amigos compartilhando o link</p>
+            <div className="input-group">
+              <input
+                type="text"
+                placeholder="Nome do grupo (ex: Trabalho, Condomínio, Família)"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && createGroup()}
+                autoFocus
+              />
+              <button onClick={createGroup} className="btn btn-primary">
+                Criar Grupo
+              </button>
+            </div>
+          </div>
+
+          <div className="group-divider">
+            <span>ou</span>
+          </div>
+
+          <div className="group-option">
+            <h2>🔗 Entrar em Grupo Existente</h2>
+            <p>Se você já tem um link de convite, cole na barra de endereço do navegador</p>
+            <div className="group-hint">
+              💡 O link tem o formato: <code>{window.location.origin}{window.location.pathname}#abc123xyz</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="app">
       <header className="header">
-        <h1>🎴 Troca de Figurinhas</h1>
-        <p>Match automático entre faltantes e repetidas</p>
+        <div className="header-top">
+          <div className="group-info-header">
+            <h1>🎴 {groupInfo.name}</h1>
+            <div className="group-actions-header">
+              <button onClick={copyGroupLink} className="btn btn-secondary btn-sm">
+                🔗 Copiar Link
+              </button>
+              <button onClick={leaveGroup} className="btn btn-danger btn-sm">
+                ← Sair
+              </button>
+            </div>
+          </div>
+          <p>Match automático entre faltantes e repetidas</p>
+        </div>
         <button onClick={() => setShowHelp(true)} className="btn btn-help">
           ❓ Como Usar
         </button>

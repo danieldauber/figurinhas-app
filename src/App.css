@@ -985,6 +985,59 @@
   margin-bottom: var(--spacing-lg);
 }
 
+/* Create Group Card - Destaque */
+.create-group-card {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(79, 70, 229, 0.05) 100%);
+  border: 2px solid var(--color-primary);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.create-group-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.create-group-card h2 {
+  color: var(--color-primary);
+}
+
+/* Landing Divider */
+.landing-divider {
+  text-align: center;
+  position: relative;
+  margin: var(--spacing-2xl) 0;
+}
+
+.landing-divider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--color-gray-300);
+}
+
+.landing-divider span {
+  background: var(--color-background);
+  padding: 0 var(--spacing-lg);
+  position: relative;
+  color: var(--color-gray-500);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+
 .landing-steps {
   display: flex;
   flex-direction: column;

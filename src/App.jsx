@@ -1,30 +1,22 @@
 import { useState, useEffect } from 'react'
 import './App.css'
+import { api } from './api'
 
 function App() {
   // Sistema de Grupos
   const getGroupId = () => window.location.hash.slice(1) || null
   const [groupId, setGroupId] = useState(getGroupId())
-  const [groupInfo, setGroupInfo] = useState(() => {
-    const id = getGroupId()
-    if (!id) return null
-    const saved = localStorage.getItem(`figurinhas_group_${id}`)
-    return saved ? JSON.parse(saved) : null
-  })
+  const [groupInfo, setGroupInfo] = useState(null)
   const [showGroupSetup, setShowGroupSetup] = useState(!groupId)
   const [newGroupName, setNewGroupName] = useState('')
+  const [loading, setLoading] = useState(true)
 
   // Admin mode check
   const isAdmin = window.location.search.includes('admin=true') ||
                   window.location.pathname.includes('/admin')
 
-  // Load users from localStorage based on group
-  const [users, setUsers] = useState(() => {
-    const id = getGroupId()
-    if (!id) return []
-    const saved = localStorage.getItem(`figurinhas_users_${id}`)
-    return saved ? JSON.parse(saved) : []
-  })
+  // Users state
+  const [users, setUsers] = useState([])
   const [currentUser, setCurrentUser] = useState('')
   const [newUserName, setNewUserName] = useState('')
   const [newUserPassword, setNewUserPassword] = useState('')
@@ -41,53 +33,89 @@ function App() {
   const [importMode, setImportMode] = useState('auto') // 'auto', 'faltantes', 'repetidas'
   const [showHelp, setShowHelp] = useState(false)
 
-  // Save users to localStorage with group isolation
+  // Load group and users from API
   useEffect(() => {
-    if (groupId) {
-      localStorage.setItem(`figurinhas_users_${groupId}`, JSON.stringify(users))
+    const loadGroupData = async () => {
+      const id = getGroupId()
+      if (!id) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        const group = await api.getGroup(id)
+        setGroupInfo(group)
+
+        if (group) {
+          const usersData = await api.getUsers(id)
+          setUsers(usersData)
+        }
+      } catch (error) {
+        console.error('Error loading group:', error)
+        setGroupInfo(null)
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [users, groupId])
+
+    loadGroupData()
+  }, [groupId])
 
   // Listen for hash changes (group changes)
   useEffect(() => {
-    const handleHashChange = () => {
+    const handleHashChange = async () => {
       const newGroupId = getGroupId()
       setGroupId(newGroupId)
+      setLoading(true)
+      setCurrentUser('')
+
       if (newGroupId) {
-        const saved = localStorage.getItem(`figurinhas_users_${newGroupId}`)
-        setUsers(saved ? JSON.parse(saved) : [])
-        const groupData = localStorage.getItem(`figurinhas_group_${newGroupId}`)
-        setGroupInfo(groupData ? JSON.parse(groupData) : null)
-        setShowGroupSetup(false)
-        setCurrentUser('')
+        try {
+          const group = await api.getGroup(newGroupId)
+          setGroupInfo(group)
+
+          if (group) {
+            const usersData = await api.getUsers(newGroupId)
+            setUsers(usersData)
+          } else {
+            setUsers([])
+          }
+          setShowGroupSetup(false)
+        } catch (error) {
+          console.error('Error loading group:', error)
+          setGroupInfo(null)
+          setUsers([])
+        }
       } else {
         setShowGroupSetup(true)
         setUsers([])
         setGroupInfo(null)
       }
+      setLoading(false)
     }
 
     window.addEventListener('hashchange', handleHashChange)
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
-  const createGroup = () => {
+  const createGroup = async () => {
     if (!newGroupName.trim()) {
       alert('Digite um nome para o grupo!')
       return
     }
     const hash = Math.random().toString(36).substring(2, 10) + Date.now().toString(36)
-    const groupData = {
-      name: newGroupName,
-      createdAt: new Date().toISOString(),
-      hash: hash
+
+    try {
+      const group = await api.createGroup(hash, newGroupName)
+      window.location.hash = hash
+      setGroupId(hash)
+      setGroupInfo(group)
+      setShowGroupSetup(false)
+      setNewGroupName('')
+    } catch (error) {
+      alert('Erro ao criar grupo. Tente novamente.')
+      console.error(error)
     }
-    localStorage.setItem(`figurinhas_group_${hash}`, JSON.stringify(groupData))
-    window.location.hash = hash
-    setGroupId(hash)
-    setGroupInfo(groupData)
-    setShowGroupSetup(false)
-    setNewGroupName('')
   }
 
   const copyGroupLink = () => {
@@ -99,7 +127,7 @@ function App() {
     })
   }
 
-  const addUser = () => {
+  const addUser = async () => {
     if (!newUserName.trim()) {
       alert('Digite um nome de usuário!')
       return
@@ -112,15 +140,18 @@ function App() {
       alert('Usuário já existe!')
       return
     }
-    setUsers([...users, {
-      name: newUserName,
-      password: newUserPassword, // Em produção, isso deveria ser hash
-      faltantes: [],
-      repetidas: []
-    }])
-    setNewUserName('')
-    setNewUserPassword('')
-    alert(`Usuário ${newUserName} criado com sucesso!\n\n⚠️ Guarde sua senha: ${newUserPassword}`)
+
+    try {
+      const newUser = await api.createUser(groupId, newUserName, newUserPassword)
+      setUsers([...users, newUser])
+      setNewUserName('')
+      const savedPassword = newUserPassword
+      setNewUserPassword('')
+      alert(`Usuário ${newUserName} criado com sucesso!\n\n⚠️ Guarde sua senha: ${savedPassword}`)
+    } catch (error) {
+      alert(error.message || 'Erro ao criar usuário')
+      console.error(error)
+    }
   }
 
   const handleUserClick = (userName) => {
@@ -138,18 +169,24 @@ function App() {
     setLoginPassword('')
   }
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     const user = users.find(u => u.name === selectedUserForLogin)
     if (!user) return
 
-    if (loginPassword === user.password) {
-      setCurrentUser(selectedUserForLogin)
-      setShowPasswordPrompt(false)
-      setLoginPassword('')
-      setSelectedUserForLogin('')
-    } else {
-      alert('Senha incorreta!')
-      setLoginPassword('')
+    try {
+      const valid = await api.verifyPassword(groupId, selectedUserForLogin, loginPassword)
+      if (valid) {
+        setCurrentUser(selectedUserForLogin)
+        setShowPasswordPrompt(false)
+        setLoginPassword('')
+        setSelectedUserForLogin('')
+      } else {
+        alert('Senha incorreta!')
+        setLoginPassword('')
+      }
+    } catch (error) {
+      alert('Erro ao verificar senha')
+      console.error(error)
     }
   }
 
@@ -159,49 +196,40 @@ function App() {
     setSelectedUserForLogin('')
   }
 
-  const addSticker = () => {
+  const addSticker = async () => {
     if (!currentUser || !newSticker.trim()) return
     const stickerNum = newSticker.trim()
 
-    setUsers(users.map(user => {
-      if (user.name === currentUser) {
-        const list = stickerType === 'faltante' ? 'faltantes' : 'repetidas'
-        const otherList = stickerType === 'faltante' ? 'repetidas' : 'faltantes'
+    try {
+      const type = stickerType === 'faltante' ? 'faltante' : 'repetida'
+      await api.addSticker(groupId, currentUser, stickerNum, type)
 
-        if (user[list].includes(stickerNum)) {
-          alert('Figurinha já está na lista!')
-          return user
-        }
-
-        if (user[otherList].includes(stickerNum)) {
-          alert(`Esta figurinha já está nas suas ${otherList}!`)
-          return user
-        }
-
-        return {
-          ...user,
-          [list]: [...user[list], stickerNum].sort((a, b) => {
-            const numA = parseInt(a)
-            const numB = parseInt(b)
-            return isNaN(numA) || isNaN(numB) ? a.localeCompare(b) : numA - numB
-          })
-        }
+      // Refresh users data
+      const usersData = await api.getUsers(groupId)
+      setUsers(usersData)
+      setNewSticker('')
+    } catch (error) {
+      if (error.message.includes('opposite list')) {
+        const otherType = stickerType === 'faltante' ? 'repetidas' : 'faltantes'
+        alert(`Esta figurinha já está nas suas ${otherType}!`)
+      } else {
+        alert('Erro ao adicionar figurinha')
       }
-      return user
-    }))
-    setNewSticker('')
+      console.error(error)
+    }
   }
 
-  const removeSticker = (userName, sticker, type) => {
-    setUsers(users.map(user => {
-      if (user.name === userName) {
-        return {
-          ...user,
-          [type]: user[type].filter(s => s !== sticker)
-        }
-      }
-      return user
-    }))
+  const removeSticker = async (userName, sticker, type) => {
+    try {
+      await api.removeSticker(groupId, userName, sticker, type)
+
+      // Refresh users data
+      const usersData = await api.getUsers(groupId)
+      setUsers(usersData)
+    } catch (error) {
+      alert('Erro ao remover figurinha')
+      console.error(error)
+    }
   }
 
   const findMatches = () => {
@@ -232,39 +260,49 @@ function App() {
     setShowMatches(true)
   }
 
-  const executeMatch = (match) => {
+  const executeMatch = async (match) => {
     if (confirm(`Confirmar troca da figurinha ${match.figurinha}?\n${match.quemTem} → ${match.quemPrecisa}`)) {
-      setUsers(users.map(user => {
-        if (user.name === match.quemTem) {
-          return {
-            ...user,
-            repetidas: user.repetidas.filter(s => s !== match.figurinha)
-          }
-        }
-        if (user.name === match.quemPrecisa) {
-          return {
-            ...user,
-            faltantes: user.faltantes.filter(s => s !== match.figurinha)
-          }
-        }
-        return user
-      }))
+      try {
+        // Remove repetida from quemTem
+        await api.removeSticker(groupId, match.quemTem, match.figurinha, 'repetida')
 
-      setMatches(matches.filter(m =>
-        !(m.quemPrecisa === match.quemPrecisa &&
-          m.quemTem === match.quemTem &&
-          m.figurinha === match.figurinha)
-      ))
+        // Remove faltante from quemPrecisa
+        await api.removeSticker(groupId, match.quemPrecisa, match.figurinha, 'faltante')
 
-      alert('Troca registrada!')
+        // Refresh users data
+        const usersData = await api.getUsers(groupId)
+        setUsers(usersData)
+
+        // Remove from matches
+        setMatches(matches.filter(m =>
+          !(m.quemPrecisa === match.quemPrecisa &&
+            m.quemTem === match.quemTem &&
+            m.figurinha === match.figurinha)
+        ))
+
+        alert('Troca registrada!')
+      } catch (error) {
+        alert('Erro ao registrar troca')
+        console.error(error)
+      }
     }
   }
 
-  const deleteUser = (userName) => {
+  const deleteUser = async (userName) => {
     if (confirm(`Tem certeza que deseja deletar ${userName}?`)) {
-      setUsers(users.filter(u => u.name !== userName))
-      if (currentUser === userName) {
-        setCurrentUser('')
+      try {
+        await api.deleteUser(groupId, userName)
+
+        // Refresh users data
+        const usersData = await api.getUsers(groupId)
+        setUsers(usersData)
+
+        if (currentUser === userName) {
+          setCurrentUser('')
+        }
+      } catch (error) {
+        alert('Erro ao deletar usuário')
+        console.error(error)
       }
     }
   }
@@ -371,7 +409,7 @@ function App() {
     return { faltantes, repetidas }
   }
 
-  const importList = () => {
+  const importList = async () => {
     if (!importText.trim()) {
       alert('Cole sua lista primeiro!')
       return
@@ -390,24 +428,20 @@ function App() {
         return
       }
 
-      setUsers(users.map(user => {
-        if (user.name === currentUser) {
-          return {
-            ...user,
-            faltantes: [...new Set([...user.faltantes, ...faltantes])].sort((a, b) => {
-              const numA = parseInt(a.split('-')[1])
-              const numB = parseInt(b.split('-')[1])
-              return isNaN(numA) || isNaN(numB) ? a.localeCompare(b) : numA - numB
-            }),
-            repetidas: [...new Set([...user.repetidas, ...repetidas])].sort((a, b) => {
-              const numA = parseInt(a.split('-')[1])
-              const numB = parseInt(b.split('-')[1])
-              return isNaN(numA) || isNaN(numB) ? a.localeCompare(b) : numA - numB
-            })
-          }
-        }
-        return user
-      }))
+      // Add all stickers via API
+      const promises = []
+      for (const sticker of faltantes) {
+        promises.push(api.addSticker(groupId, currentUser, sticker, 'faltante').catch(() => {}))
+      }
+      for (const sticker of repetidas) {
+        promises.push(api.addSticker(groupId, currentUser, sticker, 'repetida').catch(() => {}))
+      }
+
+      await Promise.all(promises)
+
+      // Refresh users data
+      const usersData = await api.getUsers(groupId)
+      setUsers(usersData)
 
       alert(`Importado com sucesso!\n${faltantes.length} faltantes\n${repetidas.length} repetidas`)
       setImportText('')
@@ -466,21 +500,22 @@ function App() {
     })
   }
 
-  const clearUserStickers = () => {
+  const clearUserStickers = async () => {
     if (!currentUser) return
 
     if (confirm(`Tem certeza que deseja limpar TODAS as figurinhas de ${currentUser}?\n\nEsta ação não pode ser desfeita!`)) {
-      setUsers(users.map(user => {
-        if (user.name === currentUser) {
-          return {
-            ...user,
-            faltantes: [],
-            repetidas: []
-          }
-        }
-        return user
-      }))
-      alert('Figurinhas limpas!')
+      try {
+        await api.clearStickers(groupId, currentUser)
+
+        // Refresh users data
+        const usersData = await api.getUsers(groupId)
+        setUsers(usersData)
+
+        alert('Figurinhas limpas!')
+      } catch (error) {
+        alert('Erro ao limpar figurinhas')
+        console.error(error)
+      }
     }
   }
 
@@ -500,43 +535,20 @@ function App() {
 
   const stats = getStats()
 
+  // Loading state
+  if (loading && groupId) {
+    return (
+      <div className="group-setup">
+        <div className="group-setup-card">
+          <h1>🎴 Carregando...</h1>
+          <p className="group-subtitle">Aguarde um momento</p>
+        </div>
+      </div>
+    )
+  }
+
   // Landing Page pública (sem grupo)
   if (!groupId) {
-    // Rota secreta para criar grupos
-    const isAdminRoute = window.location.pathname.includes('/admin') ||
-                        window.location.search.includes('admin=true')
-
-    if (isAdminRoute) {
-      return (
-        <div className="group-setup">
-          <div className="group-setup-card">
-            <h1>🎴 Criar Novo Grupo</h1>
-            <p className="group-subtitle">Painel administrativo - Criação de grupos</p>
-
-            <div className="group-option">
-              <div className="input-group">
-                <input
-                  type="text"
-                  placeholder="Nome do grupo (ex: Trabalho, Condomínio, Família)"
-                  value={newGroupName}
-                  onChange={(e) => setNewGroupName(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && createGroup()}
-                  autoFocus
-                />
-                <button onClick={createGroup} className="btn btn-primary">
-                  Criar Grupo
-                </button>
-              </div>
-            </div>
-
-            <div className="admin-hint">
-              ⚠️ Após criar, compartilhe o link gerado com os participantes
-            </div>
-          </div>
-        </div>
-      )
-    }
-
     // Landing Page pública
     return (
       <div className="landing-page">
@@ -549,21 +561,46 @@ function App() {
           </div>
 
           <div className="landing-content">
+            {/* Botão Destacado para Criar Grupo */}
+            <div className="landing-card create-group-card">
+              <h2>✨ Criar Novo Grupo</h2>
+              <p style={{ marginBottom: 'var(--spacing-lg)', color: 'var(--color-gray-600)' }}>
+                Organize trocas com seus amigos, familiares ou colegas de trabalho
+              </p>
+              <div className="input-group" style={{ marginBottom: '0' }}>
+                <input
+                  type="text"
+                  placeholder="Nome do grupo (ex: Trabalho, Condomínio, Família)"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && createGroup()}
+                  style={{ flex: 1 }}
+                />
+                <button onClick={createGroup} className="btn btn-primary">
+                  🚀 Criar Grupo
+                </button>
+              </div>
+            </div>
+
+            <div className="landing-divider">
+              <span>ou</span>
+            </div>
+
             <div className="landing-card">
               <h2>🤔 Como Funciona?</h2>
               <div className="landing-steps">
                 <div className="landing-step">
                   <div className="step-number">1</div>
                   <div className="step-content">
-                    <h3>Receba o Link do Grupo</h3>
-                    <p>O organizador vai compartilhar um link único com você</p>
+                    <h3>Crie ou Entre no Grupo</h3>
+                    <p>Crie seu grupo ou use o link compartilhado pelo organizador</p>
                   </div>
                 </div>
 
                 <div className="landing-step">
                   <div className="step-number">2</div>
                   <div className="step-content">
-                    <h3>Cadastre-se no Grupo</h3>
+                    <h3>Cadastre-se</h3>
                     <p>Crie sua conta com nome e senha secreta</p>
                   </div>
                 </div>
@@ -595,14 +632,15 @@ function App() {
                 <li>🔍 <strong>Busca rápida</strong> - Encontre figurinhas específicas</li>
                 <li>📤 <strong>Exportação</strong> - Compartilhe sua lista atualizada</li>
                 <li>📱 <strong>Mobile-friendly</strong> - Funciona no celular</li>
+                <li>🌐 <strong>Compartilhamento em tempo real</strong> - Todos veem os mesmos dados</li>
               </ul>
             </div>
 
             <div className="landing-cta">
               <div className="cta-card">
-                <h3>🔗 Precisa do Link do Grupo?</h3>
+                <h3>📝 Já Tem um Grupo?</h3>
                 <p>
-                  Peça ao organizador do seu grupo para compartilhar o link de acesso.
+                  Se alguém já criou o grupo, peça o link de acesso.
                   O link tem esse formato:
                 </p>
                 <div className="cta-example">
